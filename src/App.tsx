@@ -13,7 +13,9 @@ export function App() {
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
+  const [isEmployeeFiltered, setIsEmployeeFiltered]=useState(false);
 
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
     [paginatedTransactions, transactionsByEmployee]
@@ -28,6 +30,19 @@ export function App() {
 
     setIsLoading(false)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
+
+  const loadMoreTransactions = useCallback(async () => {
+    setIsLoading(true)
+
+    const newTransactions = await paginatedTransactionsUtils.fetchAll(); // Fetch new transactions
+    setAllTransactions((prevTransactions) => [
+      ...(Array.isArray(prevTransactions) ? prevTransactions : []),  // Ensure it's an array
+      ...(Array.isArray(newTransactions?.data) ? newTransactions.data : []),  // Ensure it's an array
+    ]);
+
+    setIsLoading(false)
+  }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
+
 
   const loadTransactionsByEmployee = useCallback(
     async (employeeId: string) => {
@@ -51,7 +66,7 @@ export function App() {
         <hr className="RampBreak--l" />
 
         <InputSelect<Employee>
-          isLoading={isLoading}
+          isLoading={employeeUtils.loading} 
           defaultValue={EMPTY_EMPLOYEE}
           items={employees === null ? [] : [EMPTY_EMPLOYEE, ...employees]}
           label="Filter by employee"
@@ -61,11 +76,14 @@ export function App() {
             label: `${item.firstName} ${item.lastName}`,
           })}
           onChange={async (newValue) => {
-            if (newValue === EMPTY_EMPLOYEE) {
+            if (newValue === null || newValue.id === EMPTY_EMPLOYEE.id) {
+              setIsEmployeeFiltered(false);
               await loadAllTransactions(); // Load all transactions
             }
-            else if(newValue!==null)
-            await loadTransactionsByEmployee(newValue.id)
+            else{
+              setIsEmployeeFiltered(true);
+              await loadTransactionsByEmployee(newValue.id)
+            }
           }}
         />
 
@@ -74,12 +92,12 @@ export function App() {
         <div className="RampGrid">
           <Transactions transactions={transactions} />
 
-          {transactions !== null && (
+          {transactions !== null && !isEmployeeFiltered && (
             <button
               className="RampButton"
               disabled={paginatedTransactionsUtils.loading}
               onClick={async () => {
-                await loadAllTransactions()
+                await loadMoreTransactions()
               }}
             >
               View More
