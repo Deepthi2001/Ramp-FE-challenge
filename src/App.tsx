@@ -13,18 +13,29 @@ export function App() {
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
+  
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
 
-  const transactions = useMemo(
-    () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
-    [paginatedTransactions, transactionsByEmployee]
-  )
+  const transactions = useMemo(() => {
+    if (transactionsByEmployee) {
+      return transactionsByEmployee; 
+    }
+    return paginatedTransactions?.data ?? allTransactions;
+  }, [paginatedTransactions, transactionsByEmployee, allTransactions]);
+  
+
 
   const loadAllTransactions = useCallback(async () => {
     setIsLoading(true)
     transactionsByEmployeeUtils.invalidateData()
-
+  
     await employeeUtils.fetchAll()
     await paginatedTransactionsUtils.fetchAll()
+
+    setAllTransactions((prev) => [
+      ...prev, 
+      ...(paginatedTransactions?.data || [])
+    ]);
 
     setIsLoading(false)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
@@ -33,6 +44,7 @@ export function App() {
     async (employeeId: string) => {
       paginatedTransactionsUtils.invalidateData()
       await transactionsByEmployeeUtils.fetchById(employeeId)
+      setAllTransactions(transactionsByEmployee?.data || []);
     },
     [paginatedTransactionsUtils, transactionsByEmployeeUtils]
   )
