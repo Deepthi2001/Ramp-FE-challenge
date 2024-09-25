@@ -21,24 +21,29 @@ export function App() {
     [paginatedTransactions, transactionsByEmployee]
   )
 
+  useEffect(() => {
+    if (transactions) {
+      setAllTransactions(transactions);
+    }
+  }, [transactions]);
+
   const loadAllTransactions = useCallback(async () => {
     setIsLoading(true)
     transactionsByEmployeeUtils.invalidateData()
 
     await employeeUtils.fetchAll()
-    await paginatedTransactionsUtils.fetchAll()
 
     setIsLoading(false)
+
+    await paginatedTransactionsUtils.fetchAll()
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
 
   const loadMoreTransactions = useCallback(async () => {
     setIsLoading(true)
 
-    const newTransactions = await paginatedTransactionsUtils.fetchAll(); // Fetch new transactions
-    setAllTransactions((prevTransactions) => [
-      ...(Array.isArray(prevTransactions) ? prevTransactions : []),  // Ensure it's an array
-      ...(Array.isArray(newTransactions?.data) ? newTransactions.data : []),  // Ensure it's an array
-    ]);
+    await paginatedTransactionsUtils.fetchAll(); 
+    const updatedTransactions = [...allTransactions,...paginatedTransactions?.data]
+    setAllTransactions(updatedTransactions)
 
     setIsLoading(false)
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
@@ -66,7 +71,7 @@ export function App() {
         <hr className="RampBreak--l" />
 
         <InputSelect<Employee>
-          isLoading={employeeUtils.loading} 
+          isLoading={isLoading}
           defaultValue={EMPTY_EMPLOYEE}
           items={employees === null ? [] : [EMPTY_EMPLOYEE, ...employees]}
           label="Filter by employee"
@@ -78,7 +83,7 @@ export function App() {
           onChange={async (newValue) => {
             if (newValue === null || newValue.id === EMPTY_EMPLOYEE.id) {
               setIsEmployeeFiltered(false);
-              await loadAllTransactions(); // Load all transactions
+              await loadAllTransactions();
             }
             else{
               setIsEmployeeFiltered(true);
@@ -90,9 +95,9 @@ export function App() {
         <div className="RampBreak--l" />
 
         <div className="RampGrid">
-          <Transactions transactions={transactions} />
+          <Transactions transactions={allTransactions} />
 
-          {transactions !== null && !isEmployeeFiltered && (
+          {allTransactions !== null && !isEmployeeFiltered && (paginatedTransactions?.nextPage) && (
             <button
               className="RampButton"
               disabled={paginatedTransactionsUtils.loading}
