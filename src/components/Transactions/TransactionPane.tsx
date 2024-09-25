@@ -1,13 +1,29 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { InputCheckbox } from "../InputCheckbox"
 import { TransactionPaneComponent } from "./types"
+
+
+const saveApprovalState = (transactionId, approved) => {
+  const approvals = JSON.parse(localStorage.getItem("approvals")) || {};
+  approvals[transactionId] = approved;
+  localStorage.setItem("approvals", JSON.stringify(approvals));
+}
+
+const getApprovalState = (transactionId) => {
+  const approvals = JSON.parse(localStorage.getItem("approvals")) || {};
+  return approvals[transactionId];
+}
 
 export const TransactionPane: TransactionPaneComponent = ({
   transaction,
   loading,
   setTransactionApproval: consumerSetTransactionApproval,
 }) => {
-  const [approved, setApproved] = useState(transaction.approved)
+  const [approved, setApproved] = useState(getApprovalState(transaction.id) ?? transaction.approved);
+
+  useEffect(() => {
+    setApproved(getApprovalState(transaction.id) ?? transaction.approved);
+  }, [transaction.id]);
 
   return (
     <div className="RampPane">
@@ -28,7 +44,8 @@ export const TransactionPane: TransactionPaneComponent = ({
             newValue,
           })
 
-          setApproved(newValue)
+          setApproved(newValue);
+          saveApprovalState(transaction.id, newValue); 
         }}
       />
     </div>
@@ -38,4 +55,4 @@ export const TransactionPane: TransactionPaneComponent = ({
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-})
+});

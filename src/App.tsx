@@ -53,6 +53,7 @@ export function App() {
     async (employeeId: string) => {
       paginatedTransactionsUtils.invalidateData()
       await transactionsByEmployeeUtils.fetchById(employeeId)
+      setAllTransactions(transactionsByEmployee)
     },
     [paginatedTransactionsUtils, transactionsByEmployeeUtils]
   )
